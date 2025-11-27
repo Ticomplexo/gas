@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gás App</title>
+    <title>Gás App 4.8</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- jsPDF -->
@@ -83,7 +83,7 @@
     <!-- Loading -->
     <div id="loading-screen" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div>
-        <p class="mt-4 text-indigo-700 font-bold text-sm tracking-wide animate-pulse">CARREGANDO SISTEMA...</p>
+        <p class="mt-4 text-indigo-700 font-bold text-sm tracking-wide animate-pulse">A INICIAR v4.8...</p>
     </div>
 
     <!-- Toast -->
@@ -352,7 +352,7 @@
             paymentMethods: ['Dinheiro', 'Cartão', 'MBWay', 'Transferência'],
             dailyData: null,
             editingProdId: null,
-            editingSaleIndex: null, // Note: Now mainly used to retrieve object, but operations use ID
+            editingSaleIndex: null, // Index visual para referência
             adjustingMethod: null
         };
 
@@ -433,6 +433,7 @@
                 const stock = state.stock[p.id] || 0;
                 const soldToday = state.dailyData && state.dailyData.sales ? state.dailyData.sales.filter(s => s.pid === p.id).length : 0;
                 
+                // UI: "Chips" com contadores organizados
                 return `
                 <div id="card-${p.id}" class="product-card bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center mb-3">
                     <div class="flex-1">
@@ -497,24 +498,24 @@
             }
         }
 
+        // FUNÇÃO DE VENDA BLINDADA (v4.7 + v4.8)
         window.finishSale = async () => {
             const btn = document.getElementById('btn-checkout');
             btn.textContent = 'Processando...'; btn.disabled = true;
             try {
-                const batch = [];
                 const updates = {};
                 const salesToAdd = [];
 
                 state.products.forEach(p => {
                     const q = state.cart[p.id] || 0;
                     if(q > 0) {
-                        // Atomic Update Logic Preparation
+                        // Atualização Atômica: Garante que o estoque não se perde
                         updates[p.id] = increment(-q);
                         
-                        // Prepare sales items with Unique ID
+                        // Gera ID único para cada item vendido
                         for(let i=0; i<q; i++) {
                             salesToAdd.push({ 
-                                id: crypto.randomUUID(), // CRITICAL FIX: Unique ID
+                                id: crypto.randomUUID(), 
                                 pid: p.id, 
                                 price: p.price, 
                                 method: state.payment, 
@@ -527,14 +528,14 @@
                 const publicPath = `artifacts/${APP_ID}/public/data`;
                 const realToday = new Date().toISOString().split('T')[0];
 
-                // 1. Update Stock Atomically
+                // 1. Atualiza Estoque no Banco
                 await updateDoc(doc(db, publicPath, 'MasterData/masterStock'), updates);
                 
-                // 2. Fetch fresh stock for snapshot integrity
+                // 2. Busca o estoque real atualizado (para o relatório)
                 const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
                 const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
 
-                // 3. Update Sales Doc
+                // 3. Atualiza Vendas do Dia
                 const salesRef = doc(db, publicPath, `DailySales/${realToday}`);
                 let current = { sales: [], totalSales: 0, totalValue: 0 };
                 try {
@@ -546,7 +547,7 @@
                     sales: [...(current.sales||[]), ...salesToAdd],
                     totalSales: (current.totalSales||0) + salesToAdd.length,
                     totalValue: (current.totalValue||0) + salesToAdd.reduce((a,b)=>a+b.price,0),
-                    finalStock: freshStock // Save true fresh stock
+                    finalStock: freshStock
                 });
 
                 state.cart = {}; state.payment = '';
@@ -569,7 +570,7 @@
                 renderAdminSalesList(data);
                 renderAdminPayTotals(data);
                 renderStockFlow(data, dateStr);
-                renderProducts(); // Refresh sold counts
+                renderProducts(); // Atualiza contadores "Vendido Hoje"
             });
         }
 
@@ -810,25 +811,20 @@
             const newProdObj = state.products.find(p=>p.id===newPid);
             if(!newProdObj) return;
 
-            // USE ID for safety, though editing usually replaces the object
             const saleId = oldSale.id || null;
 
-            // STOCK LOGIC: Atomic Increment
+            // STOCK ATÔMICO
             const updates = {};
-            
-            // Revert Old
+            // Devolve o antigo
             updates[oldSale.pid] = increment(1);
-            // Apply New Total
+            // Retira o novo
             updates[newPid] = increment(-newQty);
 
-            // Execute Stock Update
             await updateDoc(doc(db, `artifacts/${APP_ID}/public/data`, 'MasterData/masterStock'), updates);
             
-            // Fetch Fresh Stock
             const freshStockSnap = await getDoc(doc(db, `artifacts/${APP_ID}/public/data`, 'MasterData/masterStock'));
             const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
 
-            // Update Sales List
             const newSalesList = [...state.dailyData.sales];
             const modifiedSale = { ...oldSale, pid: newPid, method: newMethod, price: newProdObj.price };
             newSalesList[idx] = modifiedSale;
@@ -887,6 +883,40 @@
             showToast('Ajuste Realizado', 'success');
         };
 
+        // --- FUNÇÃO EXCLUIR SEGURA (POR ID) ---
+        window.deleteSale = async (idx) => {
+            if(!confirm('Estornar venda?')) return;
+            
+            const sale = state.dailyData.sales[idx];
+            // Filtra por ID se existir, senão por índice (retrocompatibilidade)
+            const newSales = sale.id 
+                ? state.dailyData.sales.filter(s => s.id !== sale.id)
+                : state.dailyData.sales.filter((_, i) => i !== idx);
+
+            const publicPath = `artifacts/${APP_ID}/public/data`;
+
+            // 1. Devolve Estoque (Atômico)
+            if(sale.pid !== 'adjustment') {
+                const updates = {};
+                updates[sale.pid] = increment(1); 
+                await updateDoc(doc(db, publicPath, 'MasterData/masterStock'), updates);
+            }
+
+            // 2. Pega Estoque Fresco
+            const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
+            const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
+
+            // 3. Atualiza Vendas
+            const dateStr = document.getElementById('report-date').value;
+            await setDoc(doc(db, publicPath, `DailySales/${dateStr}`), {
+                sales: newSales,
+                totalSales: newSales.filter(s=>s.pid!=='adjustment').length,
+                totalValue: newSales.reduce((a,b)=>a+b.price,0),
+                finalStock: freshStock
+            });
+            showToast('Estornado', 'success');
+        };
+
         window.deleteStockHistoryItem = async (ts) => {
             if(!confirm('Apagar registro visual?')) return;
             const publicPath = `artifacts/${APP_ID}/public/data`;
@@ -938,8 +968,7 @@
              state.products.forEach(p => {
                  const v = parseInt(document.getElementById(`load-${p.id}`).value);
                  if(v > 0) { 
-                     // Atomic Increment
-                     updates[p.id] = increment(v); 
+                     updates[p.id] = increment(v); // Atômico
                      hist.push({ts:Date.now(),name:p.name,qty:v}); 
                      has=true; 
                  }
@@ -947,17 +976,14 @@
              if(!has) return showToast('Preencha quantidades', 'error');
              
              const publicPath = `artifacts/${APP_ID}/public/data`;
-             // 1. Update Stock
              await updateDoc(doc(db, publicPath, 'MasterData/masterStock'), updates);
-             // 2. Add History
              await setDoc(doc(db, publicPath, 'MasterData/stockLoads'), {history: arrayUnion(...hist)}, {merge:true});
              
-             // 3. Fetch Fresh Stock
+             const realToday = new Date().toISOString().split('T')[0];
+             // Pega estoque fresco para salvar snapshot
              const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
              const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
              
-             // 4. Update Daily Report with fresh stock
-             const realToday = new Date().toISOString().split('T')[0];
              const salesRef = doc(db, publicPath, `DailySales/${realToday}`);
              setDoc(salesRef, { finalStock: freshStock }, {merge: true});
 
@@ -1034,40 +1060,6 @@
             const list = state.products.filter(p => p.id !== state.editingProdId);
             await setDoc(doc(db, `artifacts/${APP_ID}/public/data`, 'MasterData/products'), { list });
             closeModal('modal-product');
-        };
-
-        // --- FIXED DELETE LOGIC: ATOMIC + ID BASED ---
-        window.deleteSale = async (idx) => {
-            if(!confirm('Estornar venda?')) return;
-            
-            const sale = state.dailyData.sales[idx];
-            // Filter by ID if present, else by index as fallback (for old data)
-            const newSales = sale.id 
-                ? state.dailyData.sales.filter(s => s.id !== sale.id)
-                : state.dailyData.sales.filter((_, i) => i !== idx);
-
-            const publicPath = `artifacts/${APP_ID}/public/data`;
-
-            // 1. ATOMIC STOCK RESTORE
-            if(sale.pid !== 'adjustment') {
-                const updates = {};
-                updates[sale.pid] = increment(1); // Safely add back to stock
-                await updateDoc(doc(db, publicPath, 'MasterData/masterStock'), updates);
-            }
-
-            // 2. Fetch Fresh Stock
-            const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
-            const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
-
-            // 3. Update Sales Record
-            const dateStr = document.getElementById('report-date').value;
-            await setDoc(doc(db, publicPath, `DailySales/${dateStr}`), {
-                sales: newSales,
-                totalSales: newSales.filter(s=>s.pid!=='adjustment').length,
-                totalValue: newSales.reduce((a,b)=>a+b.price,0),
-                finalStock: freshStock
-            });
-            showToast('Estornado', 'success');
         };
 
         window.addPaymentMethod = async () => {
