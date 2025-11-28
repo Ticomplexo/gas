@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gás App 5.0</title>
+    <title>Gás App 6.1 (Ajuste)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- jsPDF -->
@@ -76,14 +76,33 @@
             to { transform: translateY(0); opacity: 1; }
         }
         .toast-enter { animation: slideIn 0.3s ease-out forwards; }
+        
+        /* Estilos específicos para carga de rua */
+        .street-badge {
+            background-color: #fff7ed;
+            color: #c2410c;
+            border: 1px solid #ffedd5;
+        }
+        
+        /* Stepper de Carga de Rua */
+        .street-stepper input {
+            text-align: center;
+            font-weight: 800;
+        }
+        .street-stepper input.negative {
+            color: #ef4444; /* Vermelho para devolução */
+        }
+        .street-stepper input.positive {
+            color: #16a34a; /* Verde para carga */
+        }
     </style>
 </head>
 <body>
 
     <!-- Loading -->
     <div id="loading-screen" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div>
-        <p class="mt-4 text-indigo-700 font-bold text-sm tracking-wide animate-pulse">A INICIAR v5.0...</p>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-orange-500"></div>
+        <p class="mt-4 text-orange-600 font-bold text-sm tracking-wide animate-pulse">CARREGANDO v6.1 (Ajuste)...</p>
     </div>
 
     <!-- Toast -->
@@ -110,7 +129,7 @@
                     <span class="text-[10px] font-bold uppercase tracking-wide">Venda</span>
                 </button>
                 <button onclick="switchTab('estoque')" class="nav-item flex-1" id="nav-estoque">
-                    <span class="text-xl mb-0.5">📦</span>
+                    <span class="text-xl mb-0.5">🚚</span>
                     <span class="text-[10px] font-bold uppercase tracking-wide">Estoque</span>
                 </button>
                 <button onclick="switchTab('relatorios')" class="nav-item flex-1" id="nav-relatorios">
@@ -159,26 +178,44 @@
 
             <!-- 2. ESTOQUE -->
             <section id="tab-estoque" class="tab-content hidden">
+                
+                <!-- NOVO: Painel de Carga de Rua OTIMIZADO -->
+                <div class="bg-orange-50 rounded-3xl shadow-sm border border-orange-100 p-6 mb-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-orange-100 rounded-full -mr-10 -mt-10 opacity-50"></div>
+                    <h3 class="text-sm font-bold text-orange-800 mb-4 flex items-center gap-2 relative z-10">
+                        <span class="text-xl">🚛</span> Status do Veículo (Rua)
+                    </h3>
+                    <div id="street-stock-grid" class="grid grid-cols-2 gap-3 relative z-10"></div>
+                    
+                    <div class="mt-4 pt-4 border-t border-orange-200/50 relative z-10">
+                        <div class="flex justify-between items-center mb-2">
+                             <p class="text-[10px] font-bold text-orange-600 uppercase tracking-wide">Ajustar Carga (Carregar/Devolver)</p>
+                             <button onclick="clearStreetInputs()" class="text-[10px] font-bold text-orange-400 hover:text-orange-600 bg-white px-2 py-1 rounded-lg border border-orange-100">Limpar</button>
+                        </div>
+                        <div id="street-load-inputs" class="space-y-3"></div>
+                        <button onclick="updateStreetLoad()" class="w-full mt-4 bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 active:scale-95 transition text-sm">
+                            Atualizar Carga da Rua
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Estoque Geral (Original) -->
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mb-6">
                     <h3 class="text-sm font-bold text-slate-800 mb-5 flex items-center gap-2">
-                        <span class="bg-blue-100 text-blue-600 p-1.5 rounded-lg text-lg">📊</span> Níveis de Estoque
+                        <span class="bg-blue-100 text-blue-600 p-1.5 rounded-lg text-lg">🏭</span> Estoque Geral (Total)
                     </h3>
                     <div id="stock-summary-grid" class="grid grid-cols-2 gap-4"></div>
                 </div>
 
+                <!-- Entrada Fornecedor (Original) -->
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mb-6">
                     <h3 class="text-sm font-bold text-slate-800 mb-5 flex items-center gap-2">
-                        <span class="bg-green-100 text-green-600 p-1.5 rounded-lg text-lg">🚚</span> Entrada de Carga
+                        <span class="bg-green-100 text-green-600 p-1.5 rounded-lg text-lg">📥</span> Compra (Fornecedor)
                     </h3>
                     <div id="stock-inputs-list" class="space-y-4 mb-5"></div>
-                    <button onclick="addStockLoad()" class="w-full bg-indigo-50 text-indigo-600 font-bold py-3.5 rounded-xl border border-indigo-100 active:scale-95 transition hover:bg-indigo-100">
-                        Confirmar Entrada
+                    <button onclick="addStockLoad()" class="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-slate-200 active:scale-95 transition">
+                        Confirmar Entrada Geral
                     </button>
-                </div>
-
-                <div class="mt-4 mb-20">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 ml-1">Histórico de Cargas</h3>
-                    <div id="stock-history-list" class="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50 overflow-hidden shadow-sm"></div>
                 </div>
             </section>
 
@@ -259,8 +296,7 @@
             </section>
         </main>
 
-        <!-- MODAIS -->
-        <!-- PRODUTO -->
+        <!-- MODAIS (Mantidos) -->
         <div id="modal-product" class="fixed inset-0 bg-slate-900/40 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm transition-opacity">
             <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-[slideIn_0.2s_ease-out]">
                 <h3 class="text-2xl font-black mb-8 text-slate-800 tracking-tight" id="modal-prod-title">Produto</h3>
@@ -275,7 +311,7 @@
                             <input type="number" id="inp-prod-price" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1 tracking-wider">Estoque</label>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1 tracking-wider">Estoque (Geral)</label>
                             <input type="number" id="inp-prod-stock" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all">
                         </div>
                     </div>
@@ -288,7 +324,6 @@
             </div>
         </div>
 
-        <!-- EDITAR VENDA -->
         <div id="modal-edit-sale" class="fixed inset-0 bg-slate-900/40 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm">
             <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-[slideIn_0.2s_ease-out]">
                 <h3 class="text-2xl font-black mb-2 text-slate-800 tracking-tight">Editar Venda</h3>
@@ -314,7 +349,6 @@
             </div>
         </div>
         
-        <!-- AJUSTE CAIXA -->
         <div id="modal-adjust-cash" class="fixed inset-0 bg-slate-900/40 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm">
              <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-[slideIn_0.2s_ease-out]">
                 <h3 class="text-2xl font-black mb-2 text-slate-800 tracking-tight">Ajustar Valor</h3>
@@ -338,7 +372,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, arrayUnion, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc, arrayUnion, increment, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse('{"apiKey":"AIzaSyDVqXZHzoBNsFd8plj4bvvnXnw2zcvEmlk","authDomain":"vendas-gas.firebaseapp.com","projectId":"vendas-gas","storageBucket":"vendas-gas.firebasestorage.app","messagingSenderId":"477896574192","appId":"1:477896574192:web:fda4b5543aee74afb56e35","measurementId":"G-42GS09Z8PG"}');
         const APP_ID = 'vendas-gas';
@@ -346,19 +380,19 @@
         let db, auth;
         let state = {
             products: [],
-            stock: {},
+            stock: {}, // Geral (Mestre)
+            streetStock: {}, // Rua (Carro)
             cart: {},
             payment: '',
             paymentMethods: ['Dinheiro', 'Cartão', 'MBWay', 'Transferência'],
             dailyData: null,
             editingProdId: null,
-            editingSaleIndex: null, // Index visual para referência
+            editingSaleIndex: null,
             adjustingMethod: null
         };
 
         const methodIcons = { 'Dinheiro': '💵', 'Cartão': '💳', 'MBWay': '📱', 'Transferência': '🏦', 'default': '💰' };
         
-        // Helper Data PT
         const formatDatePT = (dateStr) => {
             if(!dateStr) return '';
             const [y, m, d] = dateStr.split('-');
@@ -387,6 +421,8 @@
 
         function setupListeners() {
             const publicPath = `artifacts/${APP_ID}/public/data`;
+            
+            // 1. Produtos
             onSnapshot(doc(db, publicPath, 'MasterData/products'), snap => {
                 if(snap.exists() && snap.data().list) { state.products = snap.data().list; } 
                 else { 
@@ -396,14 +432,25 @@
                 }
                 updateAllUI();
             });
+
+            // 2. Config Pagamento
             onSnapshot(doc(db, publicPath, 'MasterData/config'), snap => {
                 if(snap.exists() && snap.data().paymentMethods) state.paymentMethods = snap.data().paymentMethods;
                 updateAllUI();
             });
+
+            // 3. Estoque Geral (Mestre)
             onSnapshot(doc(db, publicPath, 'MasterData/masterStock'), snap => {
                 state.stock = snap.exists() ? snap.data() : {};
                 updateAllUI();
             });
+
+            // 4. NOVO: Estoque de Rua (Carro)
+            onSnapshot(doc(db, publicPath, 'MasterData/streetStock'), snap => {
+                state.streetStock = snap.exists() ? snap.data() : {};
+                updateAllUI();
+            });
+
             const todayStr = document.getElementById('report-date').value;
             loadDayData(todayStr);
         }
@@ -430,20 +477,15 @@
         function renderProducts() {
             document.getElementById('pos-product-list').innerHTML = state.products.map(p => {
                 const qty = state.cart[p.id] || 0;
-                const stock = state.stock[p.id] || 0;
+                const stock = state.stock[p.id] || 0; // Geral
+                const street = state.streetStock[p.id] || 0; // Rua
                 const soldToday = state.dailyData && state.dailyData.sales ? state.dailyData.sales.filter(s => s.pid === p.id).length : 0;
                 
-                // UI REDESENHADA:
-                // 1. Topo: Nome + Seletor (Direita)
-                // 2. Baixo: Preço + Etiquetas
                 return `
                 <div id="card-${p.id}" class="product-card bg-white p-5 rounded-[1.5rem] shadow-sm border border-slate-100 mb-3 relative overflow-hidden">
                     
-                    <!-- Linha Superior: Nome e Seletor -->
                     <div class="flex justify-between items-start mb-3">
                         <div class="font-bold text-slate-800 text-lg leading-tight pr-2 pt-1">${p.name}</div>
-                        
-                        <!-- Seletor Movido para o Topo -->
                         <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
                             <button onclick="updateCart('${p.id}', -1)" ${qty<=0?'disabled':''} class="w-9 h-9 flex items-center justify-center rounded-lg bg-white shadow-sm text-slate-600 font-bold disabled:opacity-40 disabled:shadow-none transition active:scale-90 text-lg border border-slate-100">-</button>
                             <span class="font-bold w-6 text-center text-lg text-slate-800">${qty}</span>
@@ -451,14 +493,17 @@
                         </div>
                     </div>
 
-                    <!-- Linha Inferior: Preço e Chips -->
                     <div class="flex justify-between items-end">
                         <div>
                             <div class="text-indigo-600 font-black text-2xl mb-2">€${p.price}</div>
-                            <div class="flex items-center gap-2">
-                                <!-- Estoque Aumentado e Destacado -->
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <!-- Chip Estoque Geral -->
                                 <div class="bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1">
                                     📦 ${stock}
+                                </div>
+                                <!-- NOVO: Chip Estoque Rua (Caminhão) -->
+                                <div class="street-badge px-2.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1">
+                                    🚛 ${street}
                                 </div>
                                 <div class="bg-green-50 text-green-700 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
                                     ✅ Hoje: ${soldToday}
@@ -483,7 +528,8 @@
             const stock = state.stock[id] || 0;
             const next = curr + d;
             if(next < 0) return;
-            if(next > stock) return showToast('Estoque Insuficiente', 'error');
+            // Validação simples: não pode vender mais do que tem no estoque geral
+            if(next > stock) return showToast('Estoque Geral Insuficiente', 'error');
             state.cart[id] = next;
             renderProducts();
         };
@@ -511,21 +557,31 @@
             }
         }
 
-        // FUNÇÃO DE VENDA BLINDADA (v4.7 + v4.8)
+        // --- VENDA BLINDADA V6.0 (Atualiza Geral + Rua) ---
         window.finishSale = async () => {
             const btn = document.getElementById('btn-checkout');
             btn.textContent = 'Processando...'; btn.disabled = true;
             try {
-                const updates = {};
                 const salesToAdd = [];
+                const publicPath = `artifacts/${APP_ID}/public/data`;
+                
+                // Usando Batch para garantir que ou atualiza tudo ou nada
+                const batch = writeBatch(db);
+                const masterStockRef = doc(db, publicPath, 'MasterData/masterStock');
+                const streetStockRef = doc(db, publicPath, 'MasterData/streetStock');
+
+                // Prepara Updates
+                const updatesMaster = {};
+                const updatesStreet = {};
 
                 state.products.forEach(p => {
                     const q = state.cart[p.id] || 0;
                     if(q > 0) {
-                        // Atualização Atômica: Garante que o estoque não se perde
-                        updates[p.id] = increment(-q);
+                        // 1. Decrementa Geral
+                        updatesMaster[p.id] = increment(-q);
+                        // 2. Decrementa Rua
+                        updatesStreet[p.id] = increment(-q);
                         
-                        // Gera ID único para cada item vendido
                         for(let i=0; i<q; i++) {
                             salesToAdd.push({ 
                                 id: crypto.randomUUID(), 
@@ -537,18 +593,22 @@
                         }
                     }
                 });
-                
-                const publicPath = `artifacts/${APP_ID}/public/data`;
-                const realToday = new Date().toISOString().split('T')[0];
 
-                // 1. Atualiza Estoque no Banco
-                await updateDoc(doc(db, publicPath, 'MasterData/masterStock'), updates);
+                // Adiciona ao Batch
+                batch.update(masterStockRef, updatesMaster);
+                batch.update(streetStockRef, updatesStreet); // update: cria se não existir campos, mas doc precisa existir (snapshot garante)
                 
-                // 2. Busca o estoque real atualizado (para o relatório)
-                const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
+                // Se doc de rua não existir, usa set com merge (mais seguro)
+                batch.set(streetStockRef, updatesStreet, {merge: true}); 
+
+                // Commit Stocks
+                await batch.commit();
+                
+                // 3. Atualiza Vendas do Dia (Separado pois depende do ID da data)
+                const realToday = new Date().toISOString().split('T')[0];
+                const freshStockSnap = await getDoc(masterStockRef); // Pega estoque atualizado p/ relatório
                 const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
 
-                // 3. Atualiza Vendas do Dia
                 const salesRef = doc(db, publicPath, `DailySales/${realToday}`);
                 let current = { sales: [], totalSales: 0, totalValue: 0 };
                 try {
@@ -566,7 +626,7 @@
                 state.cart = {}; state.payment = '';
                 document.querySelectorAll('.payment-icon-btn').forEach(el => el.classList.remove('active'));
                 renderProducts();
-                showToast('Venda Confirmada!', 'success');
+                showToast('Venda Confirmada (Geral + Rua)', 'success');
             } catch(e) { showToast('Erro: '+e.message, 'error'); btn.disabled=false; }
         };
 
@@ -583,7 +643,7 @@
                 renderAdminSalesList(data);
                 renderAdminPayTotals(data);
                 renderStockFlow(data, dateStr);
-                renderProducts(); // Atualiza contadores "Vendido Hoje"
+                renderProducts(); 
             });
         }
 
@@ -646,7 +706,7 @@
                 <h3 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider">Resumo por Produto</h3>
                 <div class="space-y-3">`;
             Object.keys(byProd).forEach(pid => {
-                if (pid === 'adjustment') return; // FILTER HERE
+                if (pid === 'adjustment') return; 
                 const p = state.products.find(x=>x.id===pid);
                 const name = p ? p.name : 'Removido'; 
                 html += `
@@ -714,46 +774,171 @@
                 byProd[s.pid].count++; byProd[s.pid].total += s.price;
             });
             Object.keys(byProd).forEach(pid => {
-                if(pid === 'adjustment') return; // FILTER HERE
+                if(pid === 'adjustment') return; 
                 const p = state.products.find(x=>x.id===pid);
                 const name = p ? p.name : 'Removido';
                 doc.text(`${name}: ${byProd[pid].count} un - €${byProd[pid].total.toFixed(2)}`, 14, y);
                 y += 5;
             });
 
-            y += 10;
-            doc.setFontSize(12);
-            doc.text("Posição de Estoque Final do Dia", 14, y);
-            y += 7;
-            doc.setFontSize(10);
-            
-            if (data.finalStock) {
-                Object.keys(data.finalStock).forEach(pid => {
-                    const p = state.products.find(x=>x.id===pid);
-                    if(p) {
-                         doc.text(`${p.name}: ${data.finalStock[pid]}`, 14, y);
-                         y += 5;
-                    }
-                });
-            } else {
-                 doc.text("Estoque final não registrado nesta data.", 14, y);
-            }
-
             doc.save(`relatorio_${dateStr}.pdf`);
         };
 
-        // --- ADMIN ---
+        // --- ADMIN / ESTOQUE ---
+        
+        // Renderiza o Painel de ESTOQUE GERAL
+        function renderStockUI() {
+             document.getElementById('stock-summary-grid').innerHTML = state.products.map(p => `
+                <div class="flex justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 items-center">
+                    <span class="text-xs font-bold text-slate-600">${p.name}</span>
+                    <span class="text-base font-black ${!state.stock[p.id] ? 'text-red-500' : 'text-slate-800'}">${state.stock[p.id]||0}</span>
+                </div>
+            `).join('');
+
+            // Renderiza INPUTS de Entrada (Compra)
+            document.getElementById('stock-inputs-list').innerHTML = state.products.map(p => `
+                <div class="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-50">
+                    <span class="text-sm font-bold text-slate-700 flex-1 leading-tight">${p.name}</span>
+                    <input type="number" id="load-${p.id}" placeholder="Qtd" class="w-24 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition text-center">
+                </div>
+            `).join('');
+
+            // --- NOVO: Renderiza Painel de RUA ---
+            document.getElementById('street-stock-grid').innerHTML = state.products.map(p => `
+                <div class="flex flex-col p-3 bg-white/80 rounded-xl border border-orange-100 items-center text-center">
+                    <span class="text-[10px] font-bold text-orange-800 uppercase tracking-wide mb-1">${p.name}</span>
+                    <span class="text-2xl font-black text-orange-600">${state.streetStock[p.id]||0}</span>
+                </div>
+            `).join('');
+
+            // Renderiza INPUTS de Abastecer Carro (AGORA COM STEPPER + / -)
+            document.getElementById('street-load-inputs').innerHTML = state.products.map(p => `
+                <div class="flex items-center justify-between gap-2 street-stepper">
+                    <span class="text-xs font-bold text-orange-900 w-20 truncate">${p.name}</span>
+                    <div class="flex items-center gap-1 flex-1">
+                        <button onclick="updateStreetInput('${p.id}', -1)" class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 font-bold active:scale-95 border border-orange-200">-</button>
+                        <input type="number" id="street-load-${p.id}" value="0" readonly class="flex-1 h-8 bg-white border border-orange-200 rounded-lg text-sm outline-none focus:border-orange-500 text-center text-slate-400">
+                        <button onclick="updateStreetInput('${p.id}', 1)" class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 font-bold active:scale-95 border border-orange-200">+</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Função auxiliar para o stepper
+        window.updateStreetInput = (id, delta) => {
+            const el = document.getElementById(`street-load-${id}`);
+            let val = parseInt(el.value) || 0;
+            val += delta;
+            el.value = val;
+            
+            // Estilização visual para indicar carga (+) ou descarga (-)
+            el.classList.remove('negative', 'positive', 'text-slate-400', 'text-slate-800');
+            if (val < 0) {
+                el.classList.add('negative');
+            } else if (val > 0) {
+                el.classList.add('positive');
+            } else {
+                el.classList.add('text-slate-400');
+            }
+        };
+
+        window.clearStreetInputs = () => {
+             state.products.forEach(p => {
+                 const el = document.getElementById(`street-load-${p.id}`);
+                 if(el) {
+                     el.value = 0;
+                     el.classList.remove('negative', 'positive');
+                     el.classList.add('text-slate-400');
+                 }
+             });
+        };
+
+        // Função: Entrada de Carga GERAL (Compra)
+        window.addStockLoad = async () => {
+             const updates = {}; const hist = []; let has=false;
+             state.products.forEach(p => {
+                 const v = parseInt(document.getElementById(`load-${p.id}`).value);
+                 if(v > 0) { 
+                     updates[p.id] = increment(v); // Sobe Geral
+                     hist.push({ts:Date.now(),name:p.name,qty:v}); 
+                     has=true; 
+                 }
+             });
+             if(!has) return showToast('Preencha quantidades', 'error');
+             
+             const publicPath = `artifacts/${APP_ID}/public/data`;
+             await updateDoc(doc(db, publicPath, 'MasterData/masterStock'), updates);
+             await setDoc(doc(db, publicPath, 'MasterData/stockLoads'), {history: arrayUnion(...hist)}, {merge:true});
+             
+             // Refresh Snapshot for Report
+             const realToday = new Date().toISOString().split('T')[0];
+             const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
+             const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
+             const salesRef = doc(db, publicPath, `DailySales/${realToday}`);
+             setDoc(salesRef, { finalStock: freshStock }, {merge: true});
+
+             state.products.forEach(p => document.getElementById(`load-${p.id}`).value = '');
+             showToast('Compra Registrada', 'success');
+        };
+
+        // Função NOVO: Abastecer Veículo (Apenas Sobe Rua, Geral mantém pois é patrimônio)
+        window.updateStreetLoad = async () => {
+             const updates = {}; let has=false;
+             let errorMsg = '';
+
+             state.products.forEach(p => {
+                 const v = parseInt(document.getElementById(`street-load-${p.id}`).value);
+                 if(v !== 0) { 
+                     const currentStreet = state.streetStock[p.id] || 0;
+                     const currentMaster = state.stock[p.id] || 0; // Total (Geral)
+
+                     // BLINDAGEM 1: Não pode devolver mais do que tem na rua
+                     if (v < 0 && (currentStreet + v) < 0) {
+                         errorMsg = `Impossível tirar ${Math.abs(v)} ${p.name}. Só tem ${currentStreet} na rua.`;
+                         return;
+                     }
+
+                     // BLINDAGEM 2: Não pode carregar mais do que o total da empresa (Opcional, mas seguro)
+                     // Se assumirmos que Master = Total, então Street não pode ser > Master.
+                     // Mas 'v' aqui é transferência Depósito -> Rua.
+                     // Como Master é constante, isso é OK. O risco é ter stock fantasma.
+                     // Vamos apenas garantir que Street <= Master após a operação?
+                     if (v > 0 && (currentStreet + v) > currentMaster) {
+                          errorMsg = `Erro: Total na rua excederia estoque geral de ${p.name}.`;
+                          return;
+                     }
+
+                     updates[p.id] = increment(v); 
+                     has=true; 
+                 }
+             });
+             
+             if(errorMsg) return showToast(errorMsg, 'error');
+             if(!has) return showToast('Nada alterado', 'info');
+             
+             const publicPath = `artifacts/${APP_ID}/public/data`;
+             // Usa set com merge para garantir que o doc existe
+             await setDoc(doc(db, publicPath, 'MasterData/streetStock'), updates, {merge: true});
+             
+             // Limpar inputs
+             window.clearStreetInputs();
+             showToast('Carga de Rua Atualizada', 'success');
+        };
+
+        // --- ADMIN / OUTROS ---
+
         function renderAdminProdList() {
             document.getElementById('admin-prod-list').innerHTML = state.products.map(p => `
                 <div class="flex justify-between items-center py-4">
                     <div>
                         <div class="font-bold text-slate-800 text-sm">${p.name}</div>
-                        <div class="text-xs text-slate-500 font-medium mt-0.5">€${p.price} • Estoque: ${state.stock[p.id]||0}</div>
+                        <div class="text-xs text-slate-500 font-medium mt-0.5">€${p.price} • Total: ${state.stock[p.id]||0} • Rua: ${state.streetStock[p.id]||0}</div>
                     </div>
                     <button onclick="openProductModal('${p.id}')" class="text-indigo-600 font-bold text-xs bg-indigo-50 px-3 py-2 rounded-xl hover:bg-indigo-100 transition">Editar</button>
                 </div>
             `).join('');
         }
+
         function renderAdminSalesList(data) {
             const container = document.getElementById('admin-sales-list');
             if(!data || !data.sales.length) return container.innerHTML = '<p class="text-slate-400 text-xs text-center py-6 font-medium">Sem vendas registradas.</p>';
@@ -826,18 +1011,47 @@
             const newProdObj = state.products.find(p=>p.id===newPid);
             if(!newProdObj) return;
 
-            const saleId = oldSale.id || null;
+            // STOCK ATÔMICO DUPLO (Batch)
+            const publicPath = `artifacts/${APP_ID}/public/data`;
+            const batch = writeBatch(db);
+            const masterStockRef = doc(db, publicPath, 'MasterData/masterStock');
+            const streetStockRef = doc(db, publicPath, 'MasterData/streetStock');
 
-            // STOCK ATÔMICO
-            const updates = {};
-            // Devolve o antigo
-            updates[oldSale.pid] = increment(1);
-            // Retira o novo
-            updates[newPid] = increment(-newQty);
+            // 1. Reverter Antiga (Geral + Rua)
+            const updatesMaster = {}; updatesMaster[oldSale.pid] = increment(1);
+            const updatesStreet = {}; updatesStreet[oldSale.pid] = increment(1);
 
-            await updateDoc(doc(db, `artifacts/${APP_ID}/public/data`, 'MasterData/masterStock'), updates);
+            // 2. Aplicar Nova (Geral + Rua)
+            updatesMaster[newPid] = increment(-newQty);
+            updatesStreet[newPid] = increment(-newQty);
+
+            // Merge updates logic (se for o mesmo ID, soma)
+            // Como increment lida com isso, podemos simplificar se ID for diferente
+            // Se IDs iguais, saldo: 1 - newQty.
+            // Vamos fazer simples: batch aceita updates múltiplos? Não no mesmo doc ref repetido.
+            // Precisamos consolidar
+            const consolidatedMaster = {};
+            const consolidatedStreet = {};
+
+            // Revert Old
+            consolidatedMaster[oldSale.pid] = (consolidatedMaster[oldSale.pid] || 0) + 1;
+            consolidatedStreet[oldSale.pid] = (consolidatedStreet[oldSale.pid] || 0) + 1;
+
+            // Apply New (Logic: need to handle FieldValue, can't add simple numbers to FieldValue)
+            // Firebase Increment is special. We must use logic.
+            // Easiest way: just commit the net change.
+            if(oldSale.pid === newPid) {
+                const net = 1 - newQty;
+                batch.update(masterStockRef, { [newPid]: increment(net) });
+                batch.update(streetStockRef, { [newPid]: increment(net) });
+            } else {
+                batch.update(masterStockRef, { [oldSale.pid]: increment(1), [newPid]: increment(-newQty) });
+                batch.update(streetStockRef, { [oldSale.pid]: increment(1), [newPid]: increment(-newQty) });
+            }
             
-            const freshStockSnap = await getDoc(doc(db, `artifacts/${APP_ID}/public/data`, 'MasterData/masterStock'));
+            await batch.commit();
+            
+            const freshStockSnap = await getDoc(masterStockRef);
             const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
 
             const newSalesList = [...state.dailyData.sales];
@@ -858,7 +1072,7 @@
             const newTotalVal = newSalesList.reduce((a,b)=>a+b.price, 0);
 
             const dateStr = document.getElementById('report-date').value;
-            await setDoc(doc(db, `artifacts/${APP_ID}/public/data`, `DailySales/${dateStr}`), {
+            await setDoc(doc(db, publicPath, `DailySales/${dateStr}`), {
                 sales: newSalesList,
                 totalSales: newSalesList.length,
                 totalValue: newTotalVal,
@@ -898,79 +1112,36 @@
             showToast('Ajuste Realizado', 'success');
         };
 
-        window.deleteStockHistoryItem = async (ts) => {
-            if(!confirm('Apagar registro visual?')) return;
+        window.deleteSale = async (idx) => {
+            if(!confirm('Estornar venda?')) return;
+            
+            const sale = state.dailyData.sales[idx];
+            const newSales = sale.id 
+                ? state.dailyData.sales.filter(s => s.id !== sale.id)
+                : state.dailyData.sales.filter((_, i) => i !== idx);
+
             const publicPath = `artifacts/${APP_ID}/public/data`;
-            const docRef = doc(db, publicPath, 'MasterData/stockLoads');
-            try {
-                const snap = await getDoc(docRef);
-                if (snap.exists()) {
-                    const history = snap.data().history || [];
-                    const newHistory = history.filter(h => h.ts !== ts);
-                    await setDoc(docRef, { history: newHistory });
-                    showToast('Apagado', 'success');
-                }
-            } catch(e) {}
-        };
 
-        function renderStockUI() {
-             document.getElementById('stock-summary-grid').innerHTML = state.products.map(p => `
-                <div class="flex justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 items-center">
-                    <span class="text-xs font-bold text-slate-600">${p.name}</span>
-                    <span class="text-base font-black ${!state.stock[p.id] ? 'text-red-500' : 'text-slate-800'}">${state.stock[p.id]||0}</span>
-                </div>
-            `).join('');
-            // UI CARGA OTIMIZADA: Input menor e Nome sem corte
-            document.getElementById('stock-inputs-list').innerHTML = state.products.map(p => `
-                <div class="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-50">
-                    <span class="text-sm font-bold text-slate-700 flex-1 leading-tight">${p.name}</span>
-                    <input type="number" id="load-${p.id}" placeholder="Qtd" class="w-24 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition text-center">
-                </div>
-            `).join('');
-            getDoc(doc(db, `artifacts/${APP_ID}/public/data`, 'MasterData/stockLoads')).then(snap => {
-                 if(snap.exists() && snap.data().history) {
-                     const hist = snap.data().history.sort((a,b) => b.ts - a.ts).slice(0, 8);
-                     document.getElementById('stock-history-list').innerHTML = hist.map(h => {
-                        const d = new Date(h.ts);
-                        return `
-                        <div class="p-4 text-xs flex justify-between bg-white items-center hover:bg-slate-50 transition">
-                            <div class="flex items-center gap-3">
-                                <span class="bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold">${d.getDate()}/${d.getMonth()+1}</span>
-                                <span class="font-bold text-slate-700 text-sm">+${h.qty} ${h.name}</span>
-                            </div>
-                            <button onclick="deleteStockHistoryItem(${h.ts})" class="w-6 h-6 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 font-bold transition">×</button>
-                        </div>
-                     `}).join('');
-                 }
+            if(sale.pid !== 'adjustment') {
+                const batch = writeBatch(db);
+                // 1. Devolve Geral
+                batch.update(doc(db, publicPath, 'MasterData/masterStock'), { [sale.pid]: increment(1) });
+                // 2. Devolve Rua
+                batch.update(doc(db, publicPath, 'MasterData/streetStock'), { [sale.pid]: increment(1) });
+                await batch.commit();
+            }
+
+            const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
+            const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
+
+            const dateStr = document.getElementById('report-date').value;
+            await setDoc(doc(db, publicPath, `DailySales/${dateStr}`), {
+                sales: newSales,
+                totalSales: newSales.filter(s=>s.pid!=='adjustment').length,
+                totalValue: newSales.reduce((a,b)=>a+b.price,0),
+                finalStock: freshStock
             });
-        }
-        
-        window.addStockLoad = async () => {
-             const updates = {}; const hist = []; let has=false;
-             state.products.forEach(p => {
-                 const v = parseInt(document.getElementById(`load-${p.id}`).value);
-                 if(v > 0) { 
-                     updates[p.id] = increment(v); // Atômico
-                     hist.push({ts:Date.now(),name:p.name,qty:v}); 
-                     has=true; 
-                 }
-             });
-             if(!has) return showToast('Preencha quantidades', 'error');
-             
-             const publicPath = `artifacts/${APP_ID}/public/data`;
-             await updateDoc(doc(db, publicPath, 'MasterData/masterStock'), updates);
-             await setDoc(doc(db, publicPath, 'MasterData/stockLoads'), {history: arrayUnion(...hist)}, {merge:true});
-             
-             const realToday = new Date().toISOString().split('T')[0];
-             // Pega estoque fresco para salvar snapshot
-             const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
-             const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
-             
-             const salesRef = doc(db, publicPath, `DailySales/${realToday}`);
-             setDoc(salesRef, { finalStock: freshStock }, {merge: true});
-
-             state.products.forEach(p => document.getElementById(`load-${p.id}`).value = '');
-             showToast('Carga Registrada', 'success');
+            showToast('Estornado', 'success');
         };
 
         window.switchTab = (id) => {
@@ -1056,20 +1227,6 @@
             if(!confirm('Remover método?')) return;
             const newList = state.paymentMethods.filter((_, i) => i !== idx);
             await setDoc(doc(db, `artifacts/${APP_ID}/public/data`, 'MasterData/config'), { paymentMethods: newList }, {merge:true});
-        };
-
-        window.generateAIReport = async () => { 
-             const btn = document.getElementById('btn-ai');
-             const resDiv = document.getElementById('ai-result');
-             const date = document.getElementById('report-date').value;
-             btn.disabled = true; btn.textContent = 'Gerando...'; resDiv.classList.add('hidden');
-             const val = document.getElementById('report-kpi-value').textContent;
-             const query = `Analise vendas gas data ${date}. Total ${val}. Dê 1 insight curto.`;
-             setTimeout(()=>{
-                 resDiv.textContent = "Resumo indisponível (Demo)."; 
-                 resDiv.classList.remove('hidden');
-                 btn.disabled = false; btn.innerHTML = '<span>✨</span> Gerar Análise Inteligente';
-             }, 1000);
         };
 
         function showToast(msg, type='info') {
