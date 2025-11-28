@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gás App 6.1 (Ajuste)</title>
+    <title>Gás App 6.4</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- jsPDF -->
@@ -77,7 +77,7 @@
         }
         .toast-enter { animation: slideIn 0.3s ease-out forwards; }
         
-        /* Estilos específicos para carga de rua */
+        /* Badges */
         .street-badge {
             background-color: #fff7ed;
             color: #c2410c;
@@ -89,20 +89,16 @@
             text-align: center;
             font-weight: 800;
         }
-        .street-stepper input.negative {
-            color: #ef4444; /* Vermelho para devolução */
-        }
-        .street-stepper input.positive {
-            color: #16a34a; /* Verde para carga */
-        }
+        .street-stepper input.negative { color: #ef4444; }
+        .street-stepper input.positive { color: #16a34a; }
     </style>
 </head>
 <body>
 
     <!-- Loading -->
     <div id="loading-screen" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-orange-500"></div>
-        <p class="mt-4 text-orange-600 font-bold text-sm tracking-wide animate-pulse">CARREGANDO v6.1 (Ajuste)...</p>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div>
+        <p class="mt-4 text-indigo-700 font-bold text-sm tracking-wide animate-pulse">CARREGANDO v6.4...</p>
     </div>
 
     <!-- Toast -->
@@ -179,7 +175,7 @@
             <!-- 2. ESTOQUE -->
             <section id="tab-estoque" class="tab-content hidden">
                 
-                <!-- NOVO: Painel de Carga de Rua OTIMIZADO -->
+                <!-- Painel de Carga de Rua -->
                 <div class="bg-orange-50 rounded-3xl shadow-sm border border-orange-100 p-6 mb-6 relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-24 h-24 bg-orange-100 rounded-full -mr-10 -mt-10 opacity-50"></div>
                     <h3 class="text-sm font-bold text-orange-800 mb-4 flex items-center gap-2 relative z-10">
@@ -296,7 +292,22 @@
             </section>
         </main>
 
-        <!-- MODAIS (Mantidos) -->
+        <!-- MODAIS -->
+        
+        <!-- MODAL CONFIRMAÇÃO (GENÉRICO) -->
+        <div id="modal-confirm" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl animate-[slideIn_0.2s_ease-out] text-center">
+                <div class="w-14 h-14 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 font-black">!</div>
+                <h3 class="text-xl font-black text-slate-800 mb-2">Tem certeza?</h3>
+                <p class="text-sm text-slate-500 font-medium mb-6" id="modal-confirm-text">Essa ação não pode ser desfeita.</p>
+                <div class="flex gap-3">
+                    <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition">Não</button>
+                    <button id="btn-confirm-action" class="flex-1 bg-red-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-200 active:scale-95 transition">Sim</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUTO -->
         <div id="modal-product" class="fixed inset-0 bg-slate-900/40 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm transition-opacity">
             <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-[slideIn_0.2s_ease-out]">
                 <h3 class="text-2xl font-black mb-8 text-slate-800 tracking-tight" id="modal-prod-title">Produto</h3>
@@ -320,10 +331,11 @@
                     <button onclick="closeModal('modal-product')" class="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-2xl hover:bg-slate-200 transition">Cancelar</button>
                     <button onclick="saveProduct()" class="flex-1 bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200">Salvar</button>
                 </div>
-                <button id="btn-delete-prod" onclick="deleteProduct()" class="w-full mt-4 text-red-400 text-xs font-bold py-2 hover:bg-red-50 rounded-xl transition">Excluir Produto</button>
+                <button id="btn-delete-prod" onclick="confirmDeleteProduct()" class="w-full mt-4 text-red-400 text-xs font-bold py-2 hover:bg-red-50 rounded-xl transition">Excluir Produto</button>
             </div>
         </div>
 
+        <!-- EDITAR VENDA -->
         <div id="modal-edit-sale" class="fixed inset-0 bg-slate-900/40 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm">
             <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-[slideIn_0.2s_ease-out]">
                 <h3 class="text-2xl font-black mb-2 text-slate-800 tracking-tight">Editar Venda</h3>
@@ -349,6 +361,7 @@
             </div>
         </div>
         
+        <!-- AJUSTE CAIXA -->
         <div id="modal-adjust-cash" class="fixed inset-0 bg-slate-900/40 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm">
              <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-[slideIn_0.2s_ease-out]">
                 <h3 class="text-2xl font-black mb-2 text-slate-800 tracking-tight">Ajustar Valor</h3>
@@ -380,15 +393,16 @@
         let db, auth;
         let state = {
             products: [],
-            stock: {}, // Geral (Mestre)
-            streetStock: {}, // Rua (Carro)
+            stock: {},
+            streetStock: {},
             cart: {},
             payment: '',
             paymentMethods: ['Dinheiro', 'Cartão', 'MBWay', 'Transferência'],
             dailyData: null,
             editingProdId: null,
             editingSaleIndex: null,
-            adjustingMethod: null
+            adjustingMethod: null,
+            pendingAction: null // Para o modal de confirmação
         };
 
         const methodIcons = { 'Dinheiro': '💵', 'Cartão': '💳', 'MBWay': '📱', 'Transferência': '🏦', 'default': '💰' };
@@ -421,8 +435,6 @@
 
         function setupListeners() {
             const publicPath = `artifacts/${APP_ID}/public/data`;
-            
-            // 1. Produtos
             onSnapshot(doc(db, publicPath, 'MasterData/products'), snap => {
                 if(snap.exists() && snap.data().list) { state.products = snap.data().list; } 
                 else { 
@@ -432,25 +444,18 @@
                 }
                 updateAllUI();
             });
-
-            // 2. Config Pagamento
             onSnapshot(doc(db, publicPath, 'MasterData/config'), snap => {
                 if(snap.exists() && snap.data().paymentMethods) state.paymentMethods = snap.data().paymentMethods;
                 updateAllUI();
             });
-
-            // 3. Estoque Geral (Mestre)
             onSnapshot(doc(db, publicPath, 'MasterData/masterStock'), snap => {
                 state.stock = snap.exists() ? snap.data() : {};
                 updateAllUI();
             });
-
-            // 4. NOVO: Estoque de Rua (Carro)
             onSnapshot(doc(db, publicPath, 'MasterData/streetStock'), snap => {
                 state.streetStock = snap.exists() ? snap.data() : {};
                 updateAllUI();
             });
-
             const todayStr = document.getElementById('report-date').value;
             loadDayData(todayStr);
         }
@@ -477,38 +482,43 @@
         function renderProducts() {
             document.getElementById('pos-product-list').innerHTML = state.products.map(p => {
                 const qty = state.cart[p.id] || 0;
-                const stock = state.stock[p.id] || 0; // Geral
-                const street = state.streetStock[p.id] || 0; // Rua
+                const stock = state.stock[p.id] || 0; 
+                const street = state.streetStock[p.id] || 0; 
                 const soldToday = state.dailyData && state.dailyData.sales ? state.dailyData.sales.filter(s => s.pid === p.id).length : 0;
                 
                 return `
-                <div id="card-${p.id}" class="product-card bg-white p-5 rounded-[1.5rem] shadow-sm border border-slate-100 mb-3 relative overflow-hidden">
+                <div id="card-${p.id}" class="product-card bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100 mb-3 relative overflow-hidden">
                     
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="font-bold text-slate-800 text-lg leading-tight pr-2 pt-1">${p.name}</div>
-                        <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
-                            <button onclick="updateCart('${p.id}', -1)" ${qty<=0?'disabled':''} class="w-9 h-9 flex items-center justify-center rounded-lg bg-white shadow-sm text-slate-600 font-bold disabled:opacity-40 disabled:shadow-none transition active:scale-90 text-lg border border-slate-100">-</button>
-                            <span class="font-bold w-6 text-center text-lg text-slate-800">${qty}</span>
-                            <button onclick="updateCart('${p.id}', 1)" ${qty>=stock?'disabled':''} class="w-9 h-9 flex items-center justify-center rounded-lg bg-indigo-600 text-white font-bold disabled:bg-slate-200 disabled:text-slate-400 transition active:scale-90 text-lg shadow-md shadow-indigo-200 disabled:shadow-none">+</button>
+                    <!-- Topo: Nome e Preço (Juntos na Esquerda) e Stepper (Direita) -->
+                    <div class="flex justify-between items-center mb-5">
+                        <div class="flex flex-col justify-center">
+                            <div class="font-bold text-slate-800 text-xl leading-none tracking-tight">${p.name}</div>
+                            <div class="text-indigo-600 font-black text-2xl leading-none mt-1 tracking-tight">€${p.price}</div>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+                            <button onclick="updateCart('${p.id}', -1)" ${qty<=0?'disabled':''} class="w-12 h-12 flex items-center justify-center rounded-xl bg-white shadow-sm text-slate-500 font-bold disabled:opacity-30 disabled:shadow-none transition active:scale-90 text-2xl border border-slate-100">-</button>
+                            <span class="font-black w-8 text-center text-2xl text-slate-800">${qty}</span>
+                            <button onclick="updateCart('${p.id}', 1)" ${qty>=stock?'disabled':''} class="w-12 h-12 flex items-center justify-center rounded-xl bg-indigo-600 text-white font-bold disabled:bg-slate-200 disabled:text-slate-400 transition active:scale-90 text-2xl shadow-lg shadow-indigo-200 disabled:shadow-none">+</button>
                         </div>
                     </div>
 
-                    <div class="flex justify-between items-end">
-                        <div>
-                            <div class="text-indigo-600 font-black text-2xl mb-2">€${p.price}</div>
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <!-- Chip Estoque Geral -->
-                                <div class="bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1">
-                                    📦 ${stock}
-                                </div>
-                                <!-- NOVO: Chip Estoque Rua (Caminhão) -->
-                                <div class="street-badge px-2.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1">
-                                    🚛 ${street}
-                                </div>
-                                <div class="bg-green-50 text-green-700 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                                    ✅ Hoje: ${soldToday}
-                                </div>
-                            </div>
+                    <!-- Baixo: Chips Centralizados e Iguais -->
+                    <div class="grid grid-cols-3 gap-2">
+                         <!-- Geral -->
+                        <div class="bg-slate-100 text-slate-600 py-2 rounded-xl flex flex-col items-center justify-center">
+                            <span class="text-xs mb-0.5">📦</span>
+                            <span class="font-black text-lg leading-none">${stock}</span>
+                        </div>
+                        <!-- Rua -->
+                        <div class="bg-orange-50 text-orange-600 py-2 rounded-xl flex flex-col items-center justify-center border border-orange-100">
+                            <span class="text-xs mb-0.5">🚛</span>
+                            <span class="font-black text-lg leading-none">${street}</span>
+                        </div>
+                        <!-- Vendido -->
+                        <div class="bg-green-50 text-green-700 py-2 rounded-xl flex flex-col items-center justify-center border border-green-100">
+                            <span class="text-xs mb-0.5">✅</span>
+                            <span class="font-black text-lg leading-none">${soldToday}</span>
                         </div>
                     </div>
                 </div>`;
@@ -528,7 +538,6 @@
             const stock = state.stock[id] || 0;
             const next = curr + d;
             if(next < 0) return;
-            // Validação simples: não pode vender mais do que tem no estoque geral
             if(next > stock) return showToast('Estoque Geral Insuficiente', 'error');
             state.cart[id] = next;
             renderProducts();
@@ -557,7 +566,6 @@
             }
         }
 
-        // --- VENDA BLINDADA V6.0 (Atualiza Geral + Rua) ---
         window.finishSale = async () => {
             const btn = document.getElementById('btn-checkout');
             btn.textContent = 'Processando...'; btn.disabled = true;
@@ -565,23 +573,18 @@
                 const salesToAdd = [];
                 const publicPath = `artifacts/${APP_ID}/public/data`;
                 
-                // Usando Batch para garantir que ou atualiza tudo ou nada
                 const batch = writeBatch(db);
                 const masterStockRef = doc(db, publicPath, 'MasterData/masterStock');
                 const streetStockRef = doc(db, publicPath, 'MasterData/streetStock');
 
-                // Prepara Updates
                 const updatesMaster = {};
                 const updatesStreet = {};
 
                 state.products.forEach(p => {
                     const q = state.cart[p.id] || 0;
                     if(q > 0) {
-                        // 1. Decrementa Geral
                         updatesMaster[p.id] = increment(-q);
-                        // 2. Decrementa Rua
                         updatesStreet[p.id] = increment(-q);
-                        
                         for(let i=0; i<q; i++) {
                             salesToAdd.push({ 
                                 id: crypto.randomUUID(), 
@@ -594,19 +597,13 @@
                     }
                 });
 
-                // Adiciona ao Batch
                 batch.update(masterStockRef, updatesMaster);
-                batch.update(streetStockRef, updatesStreet); // update: cria se não existir campos, mas doc precisa existir (snapshot garante)
-                
-                // Se doc de rua não existir, usa set com merge (mais seguro)
                 batch.set(streetStockRef, updatesStreet, {merge: true}); 
 
-                // Commit Stocks
                 await batch.commit();
                 
-                // 3. Atualiza Vendas do Dia (Separado pois depende do ID da data)
                 const realToday = new Date().toISOString().split('T')[0];
-                const freshStockSnap = await getDoc(masterStockRef); // Pega estoque atualizado p/ relatório
+                const freshStockSnap = await getDoc(masterStockRef);
                 const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
 
                 const salesRef = doc(db, publicPath, `DailySales/${realToday}`);
@@ -629,6 +626,27 @@
                 showToast('Venda Confirmada (Geral + Rua)', 'success');
             } catch(e) { showToast('Erro: '+e.message, 'error'); btn.disabled=false; }
         };
+
+        // --- MANIPULAÇÃO DE MODAL DE CONFIRMAÇÃO (Substitui confirm()) ---
+        window.openConfirmModal = (action, text = "Essa ação não pode ser desfeita.") => {
+            state.pendingAction = action;
+            document.getElementById('modal-confirm-text').textContent = text;
+            document.getElementById('modal-confirm').classList.remove('hidden');
+            document.getElementById('modal-confirm').classList.add('flex');
+        };
+
+        window.closeConfirmModal = () => {
+            state.pendingAction = null;
+            document.getElementById('modal-confirm').classList.add('hidden');
+            document.getElementById('modal-confirm').classList.remove('flex');
+        };
+
+        document.getElementById('btn-confirm-action').addEventListener('click', () => {
+            if(state.pendingAction) {
+                state.pendingAction();
+            }
+            closeConfirmModal();
+        });
 
         // --- RELATÓRIOS ---
         document.getElementById('report-date').addEventListener('change', (e) => loadDayData(e.target.value));
@@ -732,7 +750,6 @@
             document.getElementById('report-content').innerHTML = html;
         }
 
-        // --- PDF GENERATION ---
         window.downloadPDF = () => {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -786,7 +803,6 @@
 
         // --- ADMIN / ESTOQUE ---
         
-        // Renderiza o Painel de ESTOQUE GERAL
         function renderStockUI() {
              document.getElementById('stock-summary-grid').innerHTML = state.products.map(p => `
                 <div class="flex justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 items-center">
@@ -795,7 +811,6 @@
                 </div>
             `).join('');
 
-            // Renderiza INPUTS de Entrada (Compra)
             document.getElementById('stock-inputs-list').innerHTML = state.products.map(p => `
                 <div class="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-50">
                     <span class="text-sm font-bold text-slate-700 flex-1 leading-tight">${p.name}</span>
@@ -803,7 +818,6 @@
                 </div>
             `).join('');
 
-            // --- NOVO: Renderiza Painel de RUA ---
             document.getElementById('street-stock-grid').innerHTML = state.products.map(p => `
                 <div class="flex flex-col p-3 bg-white/80 rounded-xl border border-orange-100 items-center text-center">
                     <span class="text-[10px] font-bold text-orange-800 uppercase tracking-wide mb-1">${p.name}</span>
@@ -811,7 +825,6 @@
                 </div>
             `).join('');
 
-            // Renderiza INPUTS de Abastecer Carro (AGORA COM STEPPER + / -)
             document.getElementById('street-load-inputs').innerHTML = state.products.map(p => `
                 <div class="flex items-center justify-between gap-2 street-stepper">
                     <span class="text-xs font-bold text-orange-900 w-20 truncate">${p.name}</span>
@@ -824,14 +837,12 @@
             `).join('');
         }
         
-        // Função auxiliar para o stepper
         window.updateStreetInput = (id, delta) => {
             const el = document.getElementById(`street-load-${id}`);
             let val = parseInt(el.value) || 0;
             val += delta;
             el.value = val;
             
-            // Estilização visual para indicar carga (+) ou descarga (-)
             el.classList.remove('negative', 'positive', 'text-slate-400', 'text-slate-800');
             if (val < 0) {
                 el.classList.add('negative');
@@ -853,13 +864,12 @@
              });
         };
 
-        // Função: Entrada de Carga GERAL (Compra)
         window.addStockLoad = async () => {
              const updates = {}; const hist = []; let has=false;
              state.products.forEach(p => {
                  const v = parseInt(document.getElementById(`load-${p.id}`).value);
                  if(v > 0) { 
-                     updates[p.id] = increment(v); // Sobe Geral
+                     updates[p.id] = increment(v); 
                      hist.push({ts:Date.now(),name:p.name,qty:v}); 
                      has=true; 
                  }
@@ -870,7 +880,6 @@
              await updateDoc(doc(db, publicPath, 'MasterData/masterStock'), updates);
              await setDoc(doc(db, publicPath, 'MasterData/stockLoads'), {history: arrayUnion(...hist)}, {merge:true});
              
-             // Refresh Snapshot for Report
              const realToday = new Date().toISOString().split('T')[0];
              const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
              const freshStock = freshStockSnap.exists() ? freshStockSnap.data() : {};
@@ -881,7 +890,6 @@
              showToast('Compra Registrada', 'success');
         };
 
-        // Função NOVO: Abastecer Veículo (Apenas Sobe Rua, Geral mantém pois é patrimônio)
         window.updateStreetLoad = async () => {
              const updates = {}; let has=false;
              let errorMsg = '';
@@ -890,19 +898,12 @@
                  const v = parseInt(document.getElementById(`street-load-${p.id}`).value);
                  if(v !== 0) { 
                      const currentStreet = state.streetStock[p.id] || 0;
-                     const currentMaster = state.stock[p.id] || 0; // Total (Geral)
+                     const currentMaster = state.stock[p.id] || 0;
 
-                     // BLINDAGEM 1: Não pode devolver mais do que tem na rua
                      if (v < 0 && (currentStreet + v) < 0) {
                          errorMsg = `Impossível tirar ${Math.abs(v)} ${p.name}. Só tem ${currentStreet} na rua.`;
                          return;
                      }
-
-                     // BLINDAGEM 2: Não pode carregar mais do que o total da empresa (Opcional, mas seguro)
-                     // Se assumirmos que Master = Total, então Street não pode ser > Master.
-                     // Mas 'v' aqui é transferência Depósito -> Rua.
-                     // Como Master é constante, isso é OK. O risco é ter stock fantasma.
-                     // Vamos apenas garantir que Street <= Master após a operação?
                      if (v > 0 && (currentStreet + v) > currentMaster) {
                           errorMsg = `Erro: Total na rua excederia estoque geral de ${p.name}.`;
                           return;
@@ -917,15 +918,11 @@
              if(!has) return showToast('Nada alterado', 'info');
              
              const publicPath = `artifacts/${APP_ID}/public/data`;
-             // Usa set com merge para garantir que o doc existe
              await setDoc(doc(db, publicPath, 'MasterData/streetStock'), updates, {merge: true});
              
-             // Limpar inputs
              window.clearStreetInputs();
              showToast('Carga de Rua Atualizada', 'success');
         };
-
-        // --- ADMIN / OUTROS ---
 
         function renderAdminProdList() {
             document.getElementById('admin-prod-list').innerHTML = state.products.map(p => `
@@ -1011,35 +1008,11 @@
             const newProdObj = state.products.find(p=>p.id===newPid);
             if(!newProdObj) return;
 
-            // STOCK ATÔMICO DUPLO (Batch)
             const publicPath = `artifacts/${APP_ID}/public/data`;
             const batch = writeBatch(db);
             const masterStockRef = doc(db, publicPath, 'MasterData/masterStock');
             const streetStockRef = doc(db, publicPath, 'MasterData/streetStock');
 
-            // 1. Reverter Antiga (Geral + Rua)
-            const updatesMaster = {}; updatesMaster[oldSale.pid] = increment(1);
-            const updatesStreet = {}; updatesStreet[oldSale.pid] = increment(1);
-
-            // 2. Aplicar Nova (Geral + Rua)
-            updatesMaster[newPid] = increment(-newQty);
-            updatesStreet[newPid] = increment(-newQty);
-
-            // Merge updates logic (se for o mesmo ID, soma)
-            // Como increment lida com isso, podemos simplificar se ID for diferente
-            // Se IDs iguais, saldo: 1 - newQty.
-            // Vamos fazer simples: batch aceita updates múltiplos? Não no mesmo doc ref repetido.
-            // Precisamos consolidar
-            const consolidatedMaster = {};
-            const consolidatedStreet = {};
-
-            // Revert Old
-            consolidatedMaster[oldSale.pid] = (consolidatedMaster[oldSale.pid] || 0) + 1;
-            consolidatedStreet[oldSale.pid] = (consolidatedStreet[oldSale.pid] || 0) + 1;
-
-            // Apply New (Logic: need to handle FieldValue, can't add simple numbers to FieldValue)
-            // Firebase Increment is special. We must use logic.
-            // Easiest way: just commit the net change.
             if(oldSale.pid === newPid) {
                 const net = 1 - newQty;
                 batch.update(masterStockRef, { [newPid]: increment(net) });
@@ -1112,9 +1085,12 @@
             showToast('Ajuste Realizado', 'success');
         };
 
-        window.deleteSale = async (idx) => {
-            if(!confirm('Estornar venda?')) return;
-            
+        // --- FUNÇÃO EXCLUIR SEGURA (MODAL) ---
+        window.deleteSale = (idx) => {
+            openConfirmModal(() => performDeleteSale(idx), "Deseja realmente estornar esta venda? O estoque será devolvido.");
+        };
+
+        const performDeleteSale = async (idx) => {
             const sale = state.dailyData.sales[idx];
             const newSales = sale.id 
                 ? state.dailyData.sales.filter(s => s.id !== sale.id)
@@ -1123,12 +1099,16 @@
             const publicPath = `artifacts/${APP_ID}/public/data`;
 
             if(sale.pid !== 'adjustment') {
-                const batch = writeBatch(db);
-                // 1. Devolve Geral
-                batch.update(doc(db, publicPath, 'MasterData/masterStock'), { [sale.pid]: increment(1) });
-                // 2. Devolve Rua
-                batch.update(doc(db, publicPath, 'MasterData/streetStock'), { [sale.pid]: increment(1) });
-                await batch.commit();
+                try {
+                    const batch = writeBatch(db);
+                    // 1. Devolve Geral
+                    batch.update(doc(db, publicPath, 'MasterData/masterStock'), { [sale.pid]: increment(1) });
+                    // 2. Devolve Rua
+                    batch.set(doc(db, publicPath, 'MasterData/streetStock'), { [sale.pid]: increment(1) }, {merge: true});
+                    await batch.commit();
+                } catch(e) {
+                    return showToast('Erro no estorno de estoque: ' + e.message, 'error');
+                }
             }
 
             const freshStockSnap = await getDoc(doc(db, publicPath, 'MasterData/masterStock'));
@@ -1143,6 +1123,11 @@
             });
             showToast('Estornado', 'success');
         };
+        
+        // --- FUNÇÃO EXCLUIR PRODUTO (MODAL) ---
+        window.confirmDeleteProduct = () => {
+             openConfirmModal(() => deleteProduct(), "Apagar produto? Isso não afeta vendas passadas, mas remove do catálogo.");
+        }
 
         window.switchTab = (id) => {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -1209,7 +1194,6 @@
         };
 
         window.deleteProduct = async () => {
-            if(!state.editingProdId || !confirm('Excluir?')) return;
             const list = state.products.filter(p => p.id !== state.editingProdId);
             await setDoc(doc(db, `artifacts/${APP_ID}/public/data`, 'MasterData/products'), { list });
             closeModal('modal-product');
