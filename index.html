@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gás App 7.5 (Fix Pagamentos e Admin)</title>
+    <title>Gás App 7.8 (Reordenação Smart)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- jsPDF -->
@@ -64,6 +64,33 @@
         .delivery-card { transition: all 0.2s; border-left: 4px solid #f59e0b; }
         .delivery-card.delivering { border-left-color: #4f46e5; background-color: #eef2ff; }
         
+        /* Sugestões de Endereço */
+        .suggestions-box {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .suggestions-box.active { display: block; }
+        .suggestion-item {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+        }
+        .suggestion-item:last-child { border-bottom: none; }
+        .suggestion-item:active { background-color: #eef2ff; color: #4f46e5; }
+
         /* Animações */
         @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-slide { animation: slideIn 0.3s ease-out forwards; }
@@ -77,7 +104,7 @@
     <!-- Loading -->
     <div id="loading-screen" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div>
-        <p class="mt-4 text-indigo-700 font-bold text-sm tracking-wide animate-pulse">CARREGANDO v7.5...</p>
+        <p class="mt-4 text-indigo-700 font-bold text-sm tracking-wide animate-pulse">CARREGANDO v7.8...</p>
         <p id="loading-error" class="hidden mt-4 text-red-500 text-xs font-bold px-4 text-center"></p>
     </div>
 
@@ -176,10 +203,17 @@
                         <span class="text-xs font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded-lg" id="delivery-count">0 Pendentes</span>
                     </div>
                     
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 mb-2">
+                        <p class="text-[10px] text-blue-800 leading-tight">
+                            ℹ️ <b>Como funciona:</b> A reorganização automática agrupa por <b>Bairro (A-Z)</b> para manter entregas próximas. 
+                            <br>Para mudar a ordem manualmente, basta digitar o número desejado na caixa (ex: 1) e o sistema reordenará a lista inteira.
+                        </p>
+                    </div>
+
                     <!-- Ferramentas de Rota -->
                     <div class="grid grid-cols-2 gap-2" id="route-tools">
                         <button onclick="optimizeRoute()" class="bg-indigo-50 text-indigo-700 border border-indigo-100 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition">
-                            <span>🔃</span> Forçar Re-Rota
+                            <span>🔃</span> Reagrupar por Bairro
                         </button>
                         <button onclick="openGoogleMapsRoute()" class="bg-green-50 text-green-700 border border-green-100 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition">
                             <span>🗺️</span> Rota GPS
@@ -216,7 +250,7 @@
 
                         <div class="grid grid-cols-3 gap-3">
                             <div class="col-span-2">
-                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1 tracking-wider">Bairro</label>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1 tracking-wider">Bairro / Freguesia</label>
                                 <input type="text" id="cust-hood" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-700 outline-none focus:border-indigo-500">
                             </div>
                             <div>
@@ -224,9 +258,10 @@
                                 <input type="text" id="cust-num" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-700 outline-none focus:border-indigo-500">
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1 tracking-wider">Endereço Completo</label>
-                            <input type="text" id="cust-addr" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-700 outline-none focus:border-indigo-500">
+                        <div class="relative">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 ml-1 tracking-wider">Endereço Completo (Comece a digitar...)</label>
+                            <input type="text" id="cust-addr" onkeyup="handleAddressSearch(this, 'suggestions-cust-addr', 'cust-hood')" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-700 outline-none focus:border-indigo-500" placeholder="Rua..." autocomplete="off">
+                            <div id="suggestions-cust-addr" class="suggestions-box"></div>
                         </div>
                         
                         <div>
@@ -391,8 +426,8 @@
         </main>
 
         <!-- MODAIS -->
-        <div id="modal-customer-edit" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl h-[90vh] overflow-y-auto"><div class="flex justify-between items-center mb-6"><h3 class="text-xl font-black text-slate-800">Editar Cliente</h3><button onclick="closeModal('modal-customer-edit')" class="text-slate-400 font-bold text-xl">✕</button></div><div class="space-y-4"><input type="hidden" id="edit-cust-id"><div><label class="text-[10px] font-bold text-slate-400 uppercase">Telefone</label><input type="text" id="edit-cust-phone" readonly class="w-full p-3 bg-slate-100 rounded-xl font-bold text-slate-500 mb-2"></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">Nome</label><input type="text" id="edit-cust-name" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"></div><div class="grid grid-cols-3 gap-2"><div class="col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Bairro</label><input type="text" id="edit-cust-hood" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">Nº</label><input type="text" id="edit-cust-num" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"></div></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">Endereço</label><input type="text" id="edit-cust-addr" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">Obs</label><textarea id="edit-cust-obs" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"></textarea></div></div><div class="mt-8 flex gap-3 flex-col"><button onclick="saveCustomerEdit()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-lg">Salvar Alterações</button><button onclick="deleteCustomer()" class="w-full bg-red-50 text-red-500 font-bold py-3.5 rounded-xl">Excluir Cliente</button></div></div></div>
-        <div id="modal-order-edit" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl h-[90vh] overflow-y-auto flex flex-col"><div class="flex justify-between items-center mb-4"><h3 class="text-xl font-black text-slate-800">Editar Pedido</h3><button onclick="closeModal('modal-order-edit')" class="text-slate-400 font-bold text-xl">✕</button></div><input type="hidden" id="edit-order-id"><div class="flex-1 overflow-y-auto space-y-4"><div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><div class="text-xs font-bold text-slate-400 uppercase mb-1">Endereço de Entrega</div><input type="text" id="edit-order-addr" class="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 mb-2" placeholder="Rua"><div class="flex gap-2"><input type="text" id="edit-order-hood" class="w-2/3 p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700" placeholder="Bairro"><input type="text" id="edit-order-num" class="w-1/3 p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700" placeholder="Nº"></div></div><div><label class="block text-xs font-black text-indigo-600 uppercase mb-2">Produtos do Pedido</label><div id="edit-order-product-list" class="space-y-2"></div></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">Observação</label><textarea id="edit-order-obs" rows="2" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 text-sm"></textarea></div></div><div class="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2"><button onclick="saveOrderEdit()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-lg">Confirmar Edição</button><button onclick="deleteActiveOrder()" class="w-full text-red-500 font-bold py-3.5 rounded-xl bg-red-50 hover:bg-red-100 transition">Excluir Pedido</button></div></div></div>
+        <div id="modal-customer-edit" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl h-[90vh] overflow-y-auto"><div class="flex justify-between items-center mb-6"><h3 class="text-xl font-black text-slate-800">Editar Cliente</h3><button onclick="closeModal('modal-customer-edit')" class="text-slate-400 font-bold text-xl">✕</button></div><div class="space-y-4"><input type="hidden" id="edit-cust-id"><div><label class="text-[10px] font-bold text-slate-400 uppercase">Telefone</label><input type="text" id="edit-cust-phone" readonly class="w-full p-3 bg-slate-100 rounded-xl font-bold text-slate-500 mb-2"></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">Nome</label><input type="text" id="edit-cust-name" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"></div><div class="grid grid-cols-3 gap-2"><div class="col-span-2"><label class="text-[10px] font-bold text-slate-400 uppercase">Bairro / Freguesia</label><input type="text" id="edit-cust-hood" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">Nº</label><input type="text" id="edit-cust-num" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"></div></div><div class="relative"><label class="text-[10px] font-bold text-slate-400 uppercase">Endereço</label><input type="text" id="edit-cust-addr" onkeyup="handleAddressSearch(this, 'suggestions-edit-cust', 'edit-cust-hood')" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800" placeholder="Rua..." autocomplete="off"><div id="suggestions-edit-cust" class="suggestions-box"></div></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">Obs</label><textarea id="edit-cust-obs" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800"></textarea></div></div><div class="mt-8 flex gap-3 flex-col"><button onclick="saveCustomerEdit()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-lg">Salvar Alterações</button><button onclick="deleteCustomer()" class="w-full bg-red-50 text-red-500 font-bold py-3.5 rounded-xl">Excluir Cliente</button></div></div></div>
+        <div id="modal-order-edit" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl h-[90vh] overflow-y-auto flex flex-col"><div class="flex justify-between items-center mb-4"><h3 class="text-xl font-black text-slate-800">Editar Pedido</h3><button onclick="closeModal('modal-order-edit')" class="text-slate-400 font-bold text-xl">✕</button></div><input type="hidden" id="edit-order-id"><div class="flex-1 overflow-y-auto space-y-4"><div class="bg-slate-50 p-3 rounded-xl border border-slate-100"><div class="text-xs font-bold text-slate-400 uppercase mb-1">Endereço de Entrega</div><div class="relative mb-2"><input type="text" id="edit-order-addr" onkeyup="handleAddressSearch(this, 'suggestions-edit-order', 'edit-order-hood')" class="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 mb-2" placeholder="Rua" autocomplete="off"><div id="suggestions-edit-order" class="suggestions-box"></div></div><div class="flex gap-2"><input type="text" id="edit-order-hood" class="w-2/3 p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700" placeholder="Bairro"><input type="text" id="edit-order-num" class="w-1/3 p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700" placeholder="Nº"></div></div><div><label class="block text-xs font-black text-indigo-600 uppercase mb-2">Produtos do Pedido</label><div id="edit-order-product-list" class="space-y-2"></div></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">Observação</label><textarea id="edit-order-obs" rows="2" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 text-sm"></textarea></div></div><div class="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2"><button onclick="saveOrderEdit()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-lg">Confirmar Edição</button><button onclick="deleteActiveOrder()" class="w-full text-red-500 font-bold py-3.5 rounded-xl bg-red-50 hover:bg-red-100 transition">Excluir Pedido</button></div></div></div>
         <div id="modal-reschedule" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl animate-[slideIn_0.2s_ease-out]"><h3 class="text-xl font-black text-slate-800 mb-2">📅 Reagendar</h3><p class="text-sm text-slate-500 font-medium mb-6">Para quando deseja mover este pedido?</p><input type="date" id="reschedule-date" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-slate-800 mb-6 outline-none focus:border-indigo-500"><div class="flex gap-3"><button onclick="closeModal('modal-reschedule')" class="flex-1 bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl">Cancelar</button><button onclick="confirmReschedule()" class="flex-1 bg-orange-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200">Confirmar</button></div></div></div>
         <div id="modal-confirm" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-[80] p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl animate-[slideIn_0.2s_ease-out] text-center"><div class="w-14 h-14 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 font-black">!</div><h3 class="text-xl font-black text-slate-800 mb-2">Tem certeza?</h3><p class="text-sm text-slate-500 font-medium mb-6" id="modal-confirm-text">...</p><div class="flex gap-3"><button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl">Não</button><button id="btn-confirm-action" class="flex-1 bg-red-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-200">Sim</button></div></div></div>
         <div id="modal-product" class="fixed inset-0 bg-slate-900/40 hidden items-center justify-center z-[70] p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl"><h3 class="text-2xl font-black mb-8" id="modal-prod-title">Produto</h3><div class="space-y-5"><div><input type="text" id="inp-prod-name" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold outline-none" placeholder="Nome"></div><div class="grid grid-cols-2 gap-4"><div><input type="number" id="inp-prod-price" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold outline-none" placeholder="Preço"></div><div><input type="number" id="inp-prod-stock" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold outline-none" placeholder="Estoque"></div></div></div><div class="mt-8 flex gap-3"><button onclick="closeModal('modal-product')" class="flex-1 bg-slate-100 font-bold py-4 rounded-2xl">Cancelar</button><button onclick="saveProduct()" class="flex-1 bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg">Salvar</button></div><button onclick="confirmDeleteProduct()" id="btn-delete-prod" class="w-full mt-4 text-red-400 text-xs font-bold">Excluir</button></div></div>
@@ -485,6 +520,12 @@
             document.getElementById('header-date').textContent = new Intl.DateTimeFormat('pt-PT').format(today);
             document.getElementById('report-date').value = today.toISOString().split('T')[0];
             setupListeners();
+            // Listener global para fechar autocomplete ao clicar fora
+            document.addEventListener('click', (e) => {
+                if(!e.target.closest('.relative')) {
+                    document.querySelectorAll('.suggestions-box').forEach(el => el.style.display = 'none');
+                }
+            });
         }
 
         function setupListeners() {
@@ -555,6 +596,64 @@
             if(!document.getElementById('tab-relatorios').classList.contains('hidden')) renderReportStatus();
         }
 
+        // --- FUNÇÃO DE AUTOCOMPLETE ENDEREÇO ---
+        let debounceTimer;
+        window.handleAddressSearch = (input, resultsId, hoodFieldId) => {
+            const query = input.value;
+            const list = document.getElementById(resultsId);
+            
+            if (query.length < 3) {
+                list.style.display = 'none';
+                return;
+            }
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+                try {
+                    // API OpenStreetMap (Nominatim)
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5`;
+                    const resp = await fetch(url, { headers: { 'User-Agent': 'GasApp/7.6' } });
+                    const data = await resp.json();
+                    
+                    list.innerHTML = '';
+                    
+                    if (data.length > 0) {
+                        list.style.display = 'block';
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            
+                            // Formata o endereço para exibição
+                            const road = item.address.road || item.address.pedestrian || '';
+                            const houseNumber = item.address.house_number || '';
+                            const suburb = item.address.suburb || item.address.neighbourhood || item.address.village || item.address.quarter || '';
+                            const city = item.address.city || item.address.town || item.address.municipality || '';
+                            
+                            // Evita exibir linhas vazias
+                            const displayParts = [road, houseNumber, suburb, city].filter(Boolean);
+                            div.textContent = displayParts.join(', ');
+                            
+                            div.onclick = () => {
+                                // Preenche a Rua
+                                input.value = road;
+                                // Preenche o Bairro (se tiver campo e valor)
+                                if (hoodFieldId && suburb) {
+                                    const hoodInput = document.getElementById(hoodFieldId);
+                                    if(hoodInput) hoodInput.value = suburb;
+                                }
+                                list.style.display = 'none';
+                            };
+                            list.appendChild(div);
+                        });
+                    } else {
+                        list.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.error('Erro autocomplete:', e);
+                }
+            }, 400); // 400ms de espera
+        };
+
         // --- FUNÇÃO DE OTIMIZAÇÃO (AGORA REUTILIZÁVEL) ---
         window.optimizeRoute = async (optionalList = null) => {
              // Se passarmos uma lista manual (ex: quando salvamos um novo pedido), usamos ela. 
@@ -618,6 +717,7 @@
                 const wazeLink = `https://waze.com/ul?q=${encodeURIComponent(fullAddr)}`;
                 const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddr)}`;
 
+                // Substituímos o 'onchange' direto por 'onblur' para melhor experiência ao digitar
                 return `
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 delivery-card relative ${isDelivering ? 'delivering' : ''}">
                     <div class="mb-3 border-b border-slate-50 pb-2 flex justify-between items-start">
@@ -625,7 +725,7 @@
                             <div class="text-lg font-black text-slate-800 leading-tight">${order.hood || 'Sem Bairro'}</div>
                             <div class="text-sm font-medium text-slate-500">${order.addr}, ${order.num}</div>
                         </div>
-                        <input type="number" onchange="updateOrderIndex('${order.id}', this.value)" value="${idx+1}" class="w-10 h-8 text-center bg-slate-100 rounded-lg font-bold text-slate-600 text-sm outline-none focus:ring-2 focus:ring-indigo-200" title="Ordem">
+                        <input type="number" onchange="reorderManually('${order.id}', this.value)" value="${idx+1}" class="w-12 h-10 text-center bg-slate-100 rounded-xl font-black text-slate-800 text-lg outline-none focus:ring-4 focus:ring-indigo-100 border border-slate-200" title="Mudar Ordem">
                     </div>
                     <div class="flex justify-between items-center mb-3 text-sm">
                         <div class="font-bold text-slate-700">👤 ${order.name}</div>
@@ -646,11 +746,46 @@
             }).join('');
         }
 
+        // --- NOVA FUNÇÃO: REORDENAÇÃO MANUAL INTELIGENTE ---
+        window.reorderManually = async (orderId, newPositionStr) => {
+            const newPos = parseInt(newPositionStr);
+            if(isNaN(newPos) || newPos < 1) return showToast('Número inválido', 'error');
+
+            // 1. Pega a lista atual ordenada
+            let list = [...state.todayDeliveries];
+            
+            // 2. Encontra o índice atual do item que queremos mover
+            const oldIndex = list.findIndex(o => o.id === orderId);
+            if(oldIndex === -1) return;
+
+            // 3. Remove o item da lista
+            const [movedItem] = list.splice(oldIndex, 1);
+            
+            // 4. Insere na nova posição (ajustando para índice 0-based)
+            // Math.min garante que não colocamos além do fim da lista
+            const targetIndex = Math.min(Math.max(0, newPos - 1), list.length);
+            list.splice(targetIndex, 0, movedItem);
+
+            // 5. Salva TODOS os índices atualizados no banco
+            const batch = writeBatch(db);
+            const publicPath = `artifacts/${APP_ID}/public/data`;
+            
+            list.forEach((o, index) => {
+                const ref = doc(db, publicPath, `ActiveOrders/${o.id}`);
+                // Salva index + 1 para ficar 1, 2, 3...
+                batch.update(ref, { orderIndex: index + 1 });
+            });
+
+            await batch.commit();
+            showToast(`Reordenado: ${movedItem.name} agora é #${targetIndex + 1}`, 'success');
+        };
+
         // --- CRIAÇÃO DE PEDIDO (COM AUTO-ROTEIRIZAÇÃO) ---
         window.saveOrder = async () => {
             const phone = document.getElementById('cust-phone').value.trim();
+            const cleanPhone = phone.replace(/\D/g, ''); // Sanitiza ao salvar também
             const name = document.getElementById('cust-name').value.trim();
-            if(!phone || !name) return showToast('Telefone e Nome obrigatórios', 'error');
+            if(!cleanPhone || !name) return showToast('Telefone e Nome obrigatórios', 'error');
 
             const hasItems = Object.values(state.orderCart).some(v => v > 0);
             if(!hasItems) return showToast('Selecione produtos', 'error');
@@ -663,9 +798,10 @@
                 addr: document.getElementById('cust-addr').value,
                 num: document.getElementById('cust-num').value,
                 obs: document.getElementById('cust-obs').value,
-                phone
+                phone: cleanPhone // Salva limpo
             };
-            await setDoc(doc(db, publicPath, `Customers/${phone}`), custData, {merge:true});
+            // Usa o telefone limpo como ID para evitar duplicatas (ex: "911 222" e "911222")
+            await setDoc(doc(db, publicPath, `Customers/${cleanPhone}`), custData, {merge:true});
 
             const orderId = 'ord_' + generateUUID();
             const scheduledDate = new Date().toISOString().split('T')[0];
@@ -676,7 +812,7 @@
 
             const orderData = {
                 id: orderId,
-                customerId: phone,
+                customerId: cleanPhone,
                 ...custData,
                 products: productsList,
                 status: 'pending',
@@ -688,7 +824,6 @@
             await setDoc(doc(db, publicPath, `ActiveOrders/${orderId}`), orderData);
 
             // AUTO-ROTEIRIZAÇÃO
-            // Cria uma lista temporária com o estado atual + o novo pedido para reordenar já
             const tempList = [...state.todayDeliveries, orderData];
             await optimizeRoute(tempList);
 
@@ -780,7 +915,40 @@
         window.confirmReschedule = async () => { const date = document.getElementById('reschedule-date').value; if(!date || !state.rescheduleId) return; const publicPath = `artifacts/${APP_ID}/public/data`; await updateDoc(doc(db, publicPath, `ActiveOrders/${state.rescheduleId}`), { scheduledDate: date, orderIndex: 99999 }); closeModal('modal-reschedule'); showToast(`Reagendado para ${date}`); };
         window.startDelivery = (id) => { const order = state.todayDeliveries.find(o => o.id === id); if(!order) return; state.cart = {}; order.products.forEach(p => state.cart[p.id] = p.qty); state.activeDeliveryId = id; document.getElementById('active-delivery-banner').classList.remove('hidden'); document.getElementById('active-delivery-name').textContent = `${order.name} (${order.hood})`; renderProducts(); switchTab('vendas'); showToast('Finalize a venda no caixa'); };
         window.cancelActiveDelivery = () => { state.activeDeliveryId = null; state.cart = {}; document.getElementById('active-delivery-banner').classList.add('hidden'); renderProducts(); showToast('Entrega cancelada (Mantida)'); };
-        window.searchCustomer = async (phone) => { if(phone.length < 9) return; const publicPath = `artifacts/${APP_ID}/public/data`; const docRef = doc(db, publicPath, `Customers/${phone}`); try { const snap = await getDoc(docRef); const ind = document.getElementById('search-indicator'); if(snap.exists()) { const data = snap.data(); document.getElementById('cust-name').value = data.name || ''; document.getElementById('cust-hood').value = data.hood || ''; document.getElementById('cust-addr').value = data.addr || ''; document.getElementById('cust-num').value = data.num || ''; document.getElementById('cust-obs').value = data.obs || ''; ind.textContent = '✅'; ind.className = 'absolute right-4 top-4 text-green-500'; } else { ind.textContent = '🆕'; ind.className = 'absolute right-4 top-4 text-blue-500'; } } catch(e) { console.error(e); } };
+        
+        // --- BUSCA CLIENTE CORRIGIDA ---
+        window.searchCustomer = async (val) => {
+            // 1. Limpa o valor digitado (apenas números)
+            const cleanVal = val.replace(/\D/g, ''); 
+            if(cleanVal.length < 9) return; // Mínimo 9 dígitos para buscar
+
+            const ind = document.getElementById('search-indicator');
+            ind.textContent = '⏳';
+
+            // 2. Busca na lista local (state.allCustomers) que já está carregada
+            // Isso evita erros de rede e problemas com ID exato no Firestore
+            const found = state.allCustomers.find(c => {
+                // Limpa o ID e o telefone salvo para comparar apenas números
+                const cId = c.id.replace(/\D/g, '');
+                const cPhone = (c.phone || '').replace(/\D/g, '');
+                return cId.includes(cleanVal) || cPhone.includes(cleanVal);
+            });
+
+            if(found) {
+                document.getElementById('cust-name').value = found.name || '';
+                document.getElementById('cust-hood').value = found.hood || '';
+                document.getElementById('cust-addr').value = found.addr || '';
+                document.getElementById('cust-num').value = found.num || '';
+                document.getElementById('cust-obs').value = found.obs || '';
+                ind.textContent = '✅';
+                ind.className = 'absolute right-4 top-4 text-green-500';
+            } else {
+                // Se não achar, indica que é novo
+                ind.textContent = '🆕';
+                ind.className = 'absolute right-4 top-4 text-blue-500';
+            }
+        };
+
         function renderOrderProductList() { const container = document.getElementById('order-product-list'); if(state.products.length === 0) { container.innerHTML = '<div class="text-center text-slate-400">Sem produtos cadastrados</div>'; return; } container.innerHTML = state.products.map(p => { const qty = state.orderCart[p.id] || 0; return `<div class="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-200"><span class="font-bold text-slate-700 text-lg">${p.name}</span><div class="flex items-center gap-3"><button onclick="updateOrderCart('${p.id}', -1)" class="stepper-btn bg-white border border-slate-200 text-slate-500 shadow-sm active:scale-90 transition">-</button><span class="font-bold w-8 text-center text-xl text-slate-800">${qty}</span><button onclick="updateOrderCart('${p.id}', 1)" class="stepper-btn bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm active:scale-90 transition">+</button></div></div>`; }).join(''); }
         window.updateOrderCart = (id, d) => { const next = (state.orderCart[id] || 0) + d; if(next < 0) return; state.orderCart[id] = next; renderOrderProductList(); };
         function renderProducts() { 
